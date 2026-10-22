@@ -325,7 +325,7 @@ public sealed class TriggerService : IDisposable
     /// <summary>
     /// Quit path: lets the process end without stopping the native hook. SharpHook completes its event queue in
     /// Dispose, and a callback the OS had already dispatched then throws on the native callback thread
-    /// ("The collection has been marked as complete with regards to additions") – a crash instead of a clean quit.
+    /// ("The collection has been marked as complete with regards to additions") — a crash instead of a clean quit.
     /// The hook's threads are background threads and the OS drops the hook with the process, so nothing stays behind.
     /// </summary>
     public void AbandonForExit()
