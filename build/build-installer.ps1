@@ -37,6 +37,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $cache = Join-Path $PSScriptRoot '.cache'
+. (Join-Path $PSScriptRoot 'ensure-dotnet.ps1')
 
 function Invoke-Checked([string]$what, [scriptblock]$command) {
     & $command
