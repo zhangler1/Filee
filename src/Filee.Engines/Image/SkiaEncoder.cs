@@ -280,9 +280,10 @@ internal static class SkiaEncoder
     {
         using var pixmap = image.PeekPixels()
             ?? throw new InvalidOperationException("The image has no pixels to encode.");
-        return lossless
+        var data = lossless
             ? pixmap.Encode(new SKWebpEncoderOptions(SKWebpEncoderCompression.Lossless, 100f))
             : pixmap.Encode(new SKWebpEncoderOptions(SKWebpEncoderCompression.Lossy, quality));
+        return data ?? throw new InvalidOperationException("Skia could not encode the picture as WebP.");
     }
 
     /// <summary>Scales <paramref name="width"/> × <paramref name="height"/> so its longer edge (or width) is <paramref name="target"/>, never upscales.</summary>

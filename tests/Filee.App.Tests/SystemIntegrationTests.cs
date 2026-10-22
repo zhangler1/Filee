@@ -54,6 +54,21 @@ public sealed class SystemIntegrationTests
     }
 
     [Fact]
+    public void Without_the_release_flag_nothing_is_registered()
+    {
+        // Test assemblies carry no FileeRelease metadata, like the Lite single exe: even with both switches
+        // on in settings (their defaults) nothing is ever written to the machine.
+        var platform = new RecordingPlatform();
+        var service = new SystemIntegrationService(platform, new Texts(), NullLogger<SystemIntegrationService>.Instance)
+        {
+            ExecutablePath = Path.Combine(Path.GetTempPath(), "Filee test", "Filee"),
+        };
+        service.Apply(new AppSettings { StartWithSystem = true, ContextMenuEnabled = true });
+        Assert.Equal(0, platform.StartupCalls);
+        Assert.Equal(0, platform.MenuCalls);
+    }
+
+    [Fact]
     public void A_copy_with_its_own_data_folder_does_not_register_os_integration()
     {
         var platform = new RecordingPlatform();

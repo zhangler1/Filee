@@ -1,3 +1,4 @@
+using System.Reflection;
 using Filee.Core.Localization;
 using Filee.Core.Platform;
 using Filee.Core.Settings;
@@ -12,7 +13,7 @@ public sealed class SystemIntegrationService(IPlatformServices platform, ILocali
     private bool _skipLogged;
 
     public string? Error { get; private set; }
-    internal bool RegistrationEnabled { get; init; } = true;
+    internal bool RegistrationEnabled { get; init; } = IsReleaseBuild;
     internal string? ExecutablePath { get; init; } = Environment.ProcessPath;
 
     /// <summary>
@@ -20,6 +21,15 @@ public sealed class SystemIntegrationService(IPlatformServices platform, ILocali
     /// menu and Explorer menu would replace those of the Filee the user installed, so it registers nothing.
     /// </summary>
     internal bool SeparateDataDirectory { get; init; } = UserDataStore.OverrideDirectory is not null;
+
+    /// <summary>
+    /// True for builds published with -p:FileeRelease=true (installer, portable zip): only those register startup
+    /// and Explorer entries, so running from source leaves the user's system alone. The Lite single exe is
+    /// published without the flag and so never registers, wherever it is copied to.
+    /// </summary>
+    private static bool IsReleaseBuild =>
+        typeof(SystemIntegrationService).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+            .Any(a => a.Key == "FileeRelease");
 
     public void Apply(AppSettings settings)
     {

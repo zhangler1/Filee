@@ -3,9 +3,7 @@
 
 using Filee.Core.Conversion;
 using Filee.Engines.Image;
-using Filee.Engines.Infrastructure;
 using Filee.Engines.Pdf;
-using Microsoft.Extensions.Logging;
 
 namespace Filee.Engines;
 
@@ -15,7 +13,7 @@ public static class EngineRegistry
     /// <summary>
     /// Instantiates all converters. Order only matters as a tie-breaker when no priority is set.
     /// </summary>
-    public static IReadOnlyList<IConverter> CreateAll(EngineEnvironment env, ILoggerFactory? loggers = null) =>
+    public static IReadOnlyList<IConverter> CreateAll() =>
     [
         new SkiaImageConverter(),
         new PdfSharpConverter(),

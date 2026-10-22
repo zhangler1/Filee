@@ -4,7 +4,6 @@ using Filee.Core.Conversion;
 using Filee.Core.Presets;
 using Filee.Core.Settings;
 using Filee.Engines;
-using Filee.Engines.Infrastructure;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 using SkiaSharp;
@@ -17,8 +16,7 @@ public sealed class EngineFixture : IDisposable
     public EngineFixture()
     {
         Directory.CreateDirectory(Root);
-        var env = new EngineEnvironment(Path.Combine(Root, "data"));
-        Converters = EngineRegistry.CreateAll(env);
+        Converters = EngineRegistry.CreateAll();
         Catalog = new ConverterCatalog(Converters) { Priority = new AppSettings().EnginePriority };
     }
 

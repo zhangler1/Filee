@@ -8,7 +8,6 @@ using Filee.Core.Localization;
 using Filee.Core.Platform;
 using Filee.Core.Settings;
 using Filee.Engines;
-using Filee.Engines.Infrastructure;
 using Filee.Platform.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -41,8 +40,7 @@ public static class AppHost
         services.AddSingleton<SystemIntegrationService>();
 
         // Conversion engines
-        services.AddSingleton(_ => new EngineEnvironment(dataDir));
-        services.AddSingleton(sp => EngineRegistry.CreateAll(sp.GetRequiredService<EngineEnvironment>(), sp.GetRequiredService<ILoggerFactory>()));
+        services.AddSingleton(sp => EngineRegistry.CreateAll());
         services.AddSingleton(sp => new ConverterCatalog(sp.GetRequiredService<IReadOnlyList<IConverter>>()));
         services.AddSingleton(sp => new JobQueue(
             sp.GetRequiredService<ConverterCatalog>(),
