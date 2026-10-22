@@ -114,7 +114,8 @@ public partial class App : Application
         {
             watchdog.Dispose();
             AppHost.Get<MemoryTrimmer>().Dispose();
-            AppHost.Get<TriggerService>().Dispose();
+            // Not Dispose: SharpHook's stop can crash the quit when an event is in flight (see AbandonForExit).
+            AppHost.Get<TriggerService>().AbandonForExit();
             AppHost.Get<TrayService>().Dispose();
         };
 

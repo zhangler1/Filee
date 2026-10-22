@@ -14,12 +14,16 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Filee.App.ViewModels;
 
 /// <summary>Navigation entry. <see cref="Title"/> follows the UI language.</summary>
-public sealed partial class NavItem(string key, string titleKey, string iconKey, Type pageType) : ObservableObject
+/// <remarks>
+/// Pages are made by a factory rather than from a <see cref="Type"/>: the lite exe is trimmed, and a type only
+/// known at run time loses its constructors, so ActivatorUtilities could no longer create it.
+/// </remarks>
+public sealed partial class NavItem(string key, string titleKey, string iconKey, Func<IServiceProvider, ObservableObject> createPage) : ObservableObject
 {
     public string Key { get; } = key;
     public string TitleKey { get; } = titleKey;
     public Geometry? Icon { get; } = Application.Current?.FindResource(iconKey) as Geometry;
-    public Type PageType { get; } = pageType;
+    public Func<IServiceProvider, ObservableObject> CreatePage { get; } = createPage;
 
     [ObservableProperty] private string _title = "";
 
@@ -42,9 +46,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         _loc = loc;
         Items =
         [
-            new("home", "nav.home", "Icon.Home", typeof(HomePageViewModel)),
-            new("general", "nav.general", "Icon.Settings", typeof(GeneralPageViewModel)),
-            new("triggers", "nav.triggers", "Icon.Keyboard", typeof(TriggersPageViewModel)),
+            new("home", "nav.home", "Icon.Home", sp => ActivatorUtilities.CreateInstance<HomePageViewModel>(sp)),
+            new("general", "nav.general", "Icon.Settings", sp => ActivatorUtilities.CreateInstance<GeneralPageViewModel>(sp)),
+            new("triggers", "nav.triggers", "Icon.Keyboard", sp => ActivatorUtilities.CreateInstance<TriggersPageViewModel>(sp)),
         ];
         foreach (var item in Items)
             item.Refresh(loc);
@@ -96,8 +100,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     // Old pages may hold event subscriptions on long-lived services.
     partial void OnCurrentPageChanged(ObservableObject? oldValue, ObservableObject newValue) => (oldValue as IDisposable)?.Dispose();
 
-    private ObservableObject CreatePage(NavItem item) =>
-        (ObservableObject)ActivatorUtilities.CreateInstance(_services, item.PageType);
+    private ObservableObject CreatePage(NavItem item) => item.CreatePage(_services);
 
     public void Dispose()
     {

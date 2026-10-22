@@ -322,6 +322,22 @@ public sealed class TriggerService : IDisposable
         }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
     }
 
+    /// <summary>
+    /// Quit path: lets the process end without stopping the native hook. SharpHook completes its event queue in
+    /// Dispose, and a callback the OS had already dispatched then throws on the native callback thread
+    /// ("The collection has been marked as complete with regards to additions") – a crash instead of a clean quit.
+    /// The hook's threads are background threads and the OS drops the hook with the process, so nothing stays behind.
+    /// </summary>
+    public void AbandonForExit()
+    {
+        _permissionWatch?.Dispose();
+        _permissionWatch = null;
+        // The finalizer of the hook disposes the same completed queue: keep it from running during shutdown.
+        if (_hook is { } hook)
+            GC.SuppressFinalize(hook);
+        // The references stay: the process ends right after this, and a collected hook would be finalized.
+    }
+
     public void Dispose()
     {
         _permissionWatch?.Dispose();
