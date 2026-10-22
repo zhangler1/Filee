@@ -31,6 +31,7 @@ public class RadialControllerTests
     [AvaloniaFact]
     public void A_drag_without_files_after_a_conversion_closes_the_invisible_window()
     {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "The radial window is a Windows topmost window.");
         TestServices.EnsureInitialized("en");
         var radial = AppHost.Get<RadialController>();
         radial.ShowForDrag(400, 400);
@@ -48,6 +49,7 @@ public class RadialControllerTests
     [AvaloniaFact]
     public void Esc_closes_a_donut_whose_ring_already_finished()
     {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "The radial window is a Windows topmost window.");
         TestServices.EnsureInitialized("en");
         var radial = AppHost.Get<RadialController>();
         radial.ShowForDrag(400, 400);

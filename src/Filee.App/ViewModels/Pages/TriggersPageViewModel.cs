@@ -10,8 +10,6 @@ using Filee.App.Services.Triggers;
 using Filee.Core.Localization;
 using Filee.Core.Platform;
 using Filee.Core.Settings;
-using Filee.Platform.Linux;
-using Filee.Platform.MacOS;
 using ModifierKeys = Filee.Core.Settings.ModifierKeys;
 
 namespace Filee.App.ViewModels.Pages;
@@ -29,10 +27,8 @@ public sealed partial class TriggerGestureViewModel : ObservableObject
         Kinds = Enum.GetValues<TriggerKind>().Select(k => new Choice<TriggerKind>(k, loc[$"triggers.kind.{k}"])).ToList();
         Buttons = Enum.GetValues<TriggerMouseButton>().Where(b => b != TriggerMouseButton.None)
             .Select(b => new Choice<TriggerMouseButton>(b, loc[$"triggers.button.{b}"])).ToList();
-        // The file manager has its own name on each system: Explorer, Finder, the Linux desktop's file manager.
-        var platform = OperatingSystem.IsMacOS() ? "_macos" : OperatingSystem.IsLinux() ? "_linux" : "";
         Scopes = Enum.GetValues<TriggerScope>()
-            .Select(s => new Choice<TriggerScope>(s, loc[s == TriggerScope.FileManager ? $"triggers.scope.{s}{platform}" : $"triggers.scope.{s}"]))
+            .Select(s => new Choice<TriggerScope>(s, loc[$"triggers.scope.{s}"]))
             .ToList();
         RecordLabel = loc["triggers.record"];
         RecordingLabel = loc["triggers.recording"];
@@ -59,7 +55,7 @@ public sealed partial class TriggerGestureViewModel : ObservableObject
     public string RecordLabel { get; }
     public string RecordingLabel { get; }
     public string SystemLabel { get; }
-    public string MetaLabel => OperatingSystem.IsMacOS() ? "⌘ Cmd" : "Win";
+    public string MetaLabel => "Win";
 
     [ObservableProperty] private bool _enabled;
 
@@ -261,23 +257,15 @@ public sealed partial class TriggersPageViewModel : ObservableObject, IDisposabl
 
     public ObservableCollection<TriggerGestureViewModel> Gestures { get; } = [];
 
-    public bool IsMacOS => _platform is MacOSPlatformServices;
-    public bool CanRetryHook => _triggers is not null && (_platform?.SupportsGlobalPointerGestures == true || IsMacOS);
+    public bool IsMacOS => false;
+    public bool CanRetryHook => _triggers is not null && _platform?.SupportsGlobalPointerGestures == true;
     public string? IntegrationError => _accessibilityError ?? _integration?.Error;
-    public string? PlatformNotice => _platform switch
-    {
-        MacOSPlatformServices => _loc["triggers.macos_permissions"],
-        LinuxPlatformServices linux when OperatingSystem.IsLinux() && LinuxPlatformServices.IsWaylandSession =>
-            _loc[linux.SupportsGlobalPointerGestures ? "triggers.linux_wayland_experimental" : "triggers.linux_wayland"],
-        LinuxPlatformServices => _loc["triggers.linux_x11"],
-        _ => null,
-    };
+    public string? PlatformNotice => null;
     public string? HookStatus => _triggers?.Error is { } error ? HookFailure(_loc, error, _triggers.LinuxBackendMissing)
         : _triggers is null ? null : _loc[_triggers.IsRunning ? "triggers.hook_running" : "triggers.hook_stopped"];
 
     /// <summary>
-    /// A Linux back end that doesn't load is explained (X11 session, X libraries) instead of showing libuiohook's
-    /// result code; the code is in the log.
+    /// A back end that doesn't load is explained instead of showing libuiohook's result code; the code is in the log.
     /// </summary>
     internal static string HookFailure(ILocalizer loc, string error, bool linuxBackendMissing) =>
         linuxBackendMissing ? loc["triggers.hook_linux_backend"] : loc.Format("triggers.hook_failed", error);
@@ -288,16 +276,7 @@ public sealed partial class TriggersPageViewModel : ObservableObject, IDisposabl
     [RelayCommand]
     private void OpenAccessibility()
     {
-        try
-        {
-            _accessibilityError = null;
-            if (OperatingSystem.IsMacOS() && _platform is MacOSPlatformServices mac)
-                mac.OpenAccessibilitySettings();
-        }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
-        {
-            _accessibilityError = ex.Message;
-        }
+        _accessibilityError = null;
         OnPropertyChanged(nameof(IntegrationError));
     }
 

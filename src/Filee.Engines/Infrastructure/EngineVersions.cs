@@ -14,10 +14,6 @@ public static class EngineVersions
     /// <summary>"Filee 1.1.0" — for engines written as part of Filee.</summary>
     public static string BuiltIn { get; } = $"Filee {Of(typeof(EngineVersions).Assembly)}";
 
-    /// <summary>The version engines.json pins for a bundled or downloaded component ("0.8.6"), or null.</summary>
-    public static string? Component(string componentId) =>
-        EngineDownloads.Components.TryGetValue(componentId, out var component) ? component.Version : null;
-
     /// <summary>Informational version without the source revision ("14.17.2+a1b2c3" → "14.17.2").</summary>
     private static string Of(Assembly assembly)
     {

@@ -29,29 +29,11 @@
   <StackPanel Spacing="22">
     <TextBlock Classes="h1" Text="{DynamicResource home.title}" />
 
-    <!-- macOS without Accessibility permission: the drag gesture can't work yet. Gone once it is given. -->
-    <Border IsVisible="{Binding NeedsAccessibility}" Background="{DynamicResource AccentFaintBrush}"
-            BorderBrush="{DynamicResource AccentSoftBrush}" BorderThickness="1" CornerRadius="{DynamicResource SoftRadius}" Padding="14,10">
-      <DockPanel>
-        <Button DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0" Classes="accent"
-                Content="{DynamicResource triggers.open_accessibility}" Command="{Binding OpenAccessibilityCommand}" />
-        <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Text="{DynamicResource home.accessibility_needed}" />
-      </DockPanel>
-    </Border>
-
     <!-- Windows: Filee runs as administrator while Explorer doesn't. Explorer can't drop files here, use the menu or
          have its selection read until Filee runs with normal rights again. -->
     <Border IsVisible="{Binding IsElevated}" Background="{DynamicResource AccentFaintBrush}"
             BorderBrush="{DynamicResource DangerBrush}" BorderThickness="1" CornerRadius="{DynamicResource SoftRadius}" Padding="14,10">
-      <DockPanel>
-        <Button DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0" Classes="accent"
-                Content="{DynamicResource home.elevated_restart}" Command="{Binding RestartWithoutAdministratorRightsCommand}" />
-        <StackPanel Spacing="6" VerticalAlignment="Center">
-          <TextBlock TextWrapping="Wrap" Text="{DynamicResource home.elevated}" />
-          <TextBlock Classes="caption danger" TextWrapping="Wrap" IsVisible="{Binding ElevationRestartFailed}"
-                     Text="{DynamicResource home.elevated_restart_failed}" />
-        </StackPanel>
-      </DockPanel>
+      <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Text="{DynamicResource home.elevated}" />
     </Border>
 
     <!-- Drop zone: files dropped here open the donut toolbar at the cursor. -->

@@ -86,33 +86,15 @@ public sealed class LocalizationService : ILocalizer
     public static string LeftToRight(string text) =>
         CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft ? "\u200E" + text + "\u200E" : text;
 
-    /// <summary>Maps "auto" / a culture name to one of the shipped languages.</summary>
+    /// <summary>Maps "auto" / a culture name to one of the shipped languages (Lite: English and Chinese).</summary>
     public static string Resolve(string setting)
     {
         if (!string.Equals(setting, "auto", StringComparison.OrdinalIgnoreCase) &&
             Languages.Any(l => l.Code.Equals(setting, StringComparison.OrdinalIgnoreCase)))
             return Languages.First(l => l.Code.Equals(setting, StringComparison.OrdinalIgnoreCase)).Code;
 
-        // macOS gives an app started from Finder no LANG: its language list comes from the system instead.
-        var ui = Filee.Platform.MacOS.MacOSLocale.PreferredLanguage() ?? CultureInfo.InstalledUICulture.Name;
-        if (ui.StartsWith("ja", StringComparison.OrdinalIgnoreCase))
-            return "ja";
-        if (ui.StartsWith("ko", StringComparison.OrdinalIgnoreCase))
-            return "ko";
-        if (ui.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
-            return "zh-CN";
-        if (ui.StartsWith("pl", StringComparison.OrdinalIgnoreCase))
-            return "pl";
-        if (ui.StartsWith("es", StringComparison.OrdinalIgnoreCase))
-            return "es";
-        if (ui.StartsWith("hi", StringComparison.OrdinalIgnoreCase))
-            return "hi";
-        if (ui.StartsWith("ru", StringComparison.OrdinalIgnoreCase))
-            return "ru";
-        // "ar" and every region ("ar-SA", "ar-EG", …), but not other codes starting with "ar".
-        if (ui.Equals("ar", StringComparison.OrdinalIgnoreCase) || ui.StartsWith("ar-", StringComparison.OrdinalIgnoreCase))
-            return "ar";
-        return "en";
+        var ui = CultureInfo.InstalledUICulture.Name;
+        return ui.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "zh-CN" : "en";
     }
 
     /// <summary>

@@ -47,9 +47,6 @@ public sealed partial class GeneralPageViewModel : ObservableObject, IDisposable
         _defaultSubfolder = output.SubfolderName;
         _defaultFolder = output.CustomFolder;
         _keepFileDates = store.Settings.KeepFileDates;
-        _browserFolder = store.Settings.BrowserDrops.Folder;
-        _saveOnlyConverted = store.Settings.BrowserDrops.SaveOnlyConverted;
-        _zipGeoResults = store.Settings.ZipGeoResults;
         CloseChoices = Enum.GetValues<CloseAction>().Select(v => new Choice<CloseAction>(v, loc[$"general.close.{v}"])).ToList();
         _closeChoice = CloseChoices.First(c => c.Value == store.Settings.CloseAction);
         store.SettingsChanged += OnSettingsChanged;
@@ -92,22 +89,6 @@ public sealed partial class GeneralPageViewModel : ObservableObject, IDisposable
     partial void OnDefaultFolderChanged(string value) => Save(s => s.DefaultOutput.CustomFolder = value.Trim());
 
     [ObservableProperty] private bool _keepFileDates;
-    [ObservableProperty] private bool _zipGeoResults;
-
-    /// <summary>Where files dragged from a browser are saved; empty for the Downloads folder.</summary>
-    [ObservableProperty] private string _browserFolder;
-
-    [ObservableProperty] private bool _saveOnlyConverted;
-
-    /// <summary>The user's Downloads folder, shown while no other folder is set.</summary>
-    public string DownloadsFolder => _platform.DownloadsFolder;
-
-    /// <summary>The folder files from a browser go to now.</summary>
-    public string BrowserFolderInUse => string.IsNullOrWhiteSpace(BrowserFolder) ? DownloadsFolder : BrowserFolder.Trim();
-
-    partial void OnBrowserFolderChanged(string value) => Save(s => s.BrowserDrops.Folder = value.Trim());
-
-    partial void OnSaveOnlyConvertedChanged(bool value) => Save(s => s.BrowserDrops.SaveOnlyConverted = value);
 
     /// <summary>What closing the main window does; its "Don't ask again" also sets it.</summary>
     public IReadOnlyList<Choice<CloseAction>> CloseChoices { get; }
@@ -130,8 +111,6 @@ public sealed partial class GeneralPageViewModel : ObservableObject, IDisposable
     public void Dispose() => _store.SettingsChanged -= OnSettingsChanged;
 
     partial void OnKeepFileDatesChanged(bool value) => Save(s => s.KeepFileDates = value);
-
-    partial void OnZipGeoResultsChanged(bool value) => Save(s => s.ZipGeoResults = value);
 
     [ObservableProperty] private Choice<string> _language;
     [ObservableProperty] private bool _startWithSystem;

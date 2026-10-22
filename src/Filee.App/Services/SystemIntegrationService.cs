@@ -1,7 +1,6 @@
 using Filee.Core.Localization;
 using Filee.Core.Platform;
 using Filee.Core.Settings;
-using Filee.Platform.Linux;
 using Microsoft.Extensions.Logging;
 
 namespace Filee.App.Services;
@@ -10,12 +9,10 @@ public sealed class SystemIntegrationService(IPlatformServices platform, ILocali
 {
     private (bool Enabled, string Executable)? _startup;
     private (bool Enabled, string Executable, string Label)? _menu;
-    private bool _shortcutApplied;
-    private string? _shortcut;
     private bool _skipLogged;
 
     public string? Error { get; private set; }
-    internal bool RegistrationEnabled { get; init; } = UpdateService.IsReleaseBuild;
+    internal bool RegistrationEnabled { get; init; } = true;
     internal string? ExecutablePath { get; init; } = Environment.ProcessPath;
 
     /// <summary>
@@ -42,25 +39,7 @@ public sealed class SystemIntegrationService(IPlatformServices platform, ILocali
             _startup = startup;
         var menu = (settings.ContextMenuEnabled, executable, Label: loc["general.context_menu_label"]);
         if (_menu != menu && ApplyOne(() => platform.SetContextMenu(menu.ContextMenuEnabled, executable, menu.Label)))
-        {
             _menu = menu;
-            _shortcutApplied = false;
-        }
-        if (OperatingSystem.IsLinux() && platform is LinuxPlatformServices linux)
-        {
-            ApplyOne(() =>
-            {
-                var shortcut = settings.ContextMenuEnabled && !settings.Paused
-                    ? settings.Triggers.FirstOrDefault(g => g.Enabled && g.Kind == TriggerKind.KeyChord) : null;
-                var accelerator = shortcut is null ? null : LinuxPlatformServices.ToThunarAccelerator(shortcut);
-                if (!_shortcutApplied || _shortcut != accelerator)
-                {
-                    linux.SetThunarShortcut(accelerator);
-                    _shortcut = accelerator;
-                    _shortcutApplied = true;
-                }
-            });
-        }
         if (errors.Count > 0)
             Error = loc.Format("general.integration_failed", string.Join(Environment.NewLine, errors));
 

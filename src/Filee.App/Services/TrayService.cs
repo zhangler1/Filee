@@ -1,4 +1,4 @@
-// System tray icon: open settings, pause gestures, install a new version, quit.
+// System tray icon: open settings, pause gestures, quit. Lite: no update entry.
 
 using Avalonia;
 using Avalonia.Controls;
@@ -10,11 +10,10 @@ using Filee.Core.Settings;
 
 namespace Filee.App.Services;
 
-public sealed class TrayService(UserDataStore store, ILocalizer loc, IPlatformServices platform, WindowService windows,
-    UpdateService updates)
+public sealed class TrayService(UserDataStore store, ILocalizer loc, WindowService windows)
 {
     private TrayIcon? _tray;
-    private NativeMenuItem? _open, _pause, _quit, _update;
+    private NativeMenuItem? _open, _pause, _quit;
 
     public void Create(Application app)
     {
@@ -29,16 +28,14 @@ public sealed class TrayService(UserDataStore store, ILocalizer loc, IPlatformSe
         };
         _quit = new NativeMenuItem();
         _quit.Click += (_, _) => (app.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
-        _update = new NativeMenuItem();
-        _update.Click += async (_, _) => await updates.UpdateAsync();
 
         _tray = new TrayIcon
         {
             Icon = new WindowIcon(iconStream),
-            // Set before the icon is attached: on macOS Avalonia passes the tooltip to native code, which can't take null.
+            // Set before the icon is attached: the tooltip must not be null when it reaches native code.
             ToolTipText = "Filee",
             Menu = new NativeMenu { Items = { _open, _pause, new NativeMenuItemSeparator(), _quit } },
-            IsVisible = platform.SupportsDockVisibility ? store.Settings.ShowMenuBarIcon : true,
+            IsVisible = true,
         };
         _tray.Clicked += (_, _) => windows.ShowMain();
         TrayIcon.SetIcons(app, [_tray]);
@@ -46,31 +43,12 @@ public sealed class TrayService(UserDataStore store, ILocalizer loc, IPlatformSe
         Refresh();
         loc.LanguageChanged += (_, _) => Refresh();
         store.SettingsChanged += (_, _) => Refresh();
-        updates.PropertyChanged += (_, e) =>
-        {
-            if (UpdateTexts.Affects(e.PropertyName))
-                Refresh();
-        };
     }
 
     private void Refresh()
     {
         if (_tray?.Menu is not { } menu)
             return;
-        _tray.IsVisible = platform.SupportsDockVisibility ? store.Settings.ShowMenuBarIcon : true;
-        // "Update to x.y.z" sits at the top of the menu while a newer release is out ("Downloading… 42%" meanwhile).
-        if (updates.LatestVersion is { } latest)
-        {
-            _update!.Header = updates.Step is UpdateStep.Downloading or UpdateStep.Installing
-                ? UpdateTexts.Short(updates, loc)
-                : loc.Format("tray.update", latest);
-            if (!menu.Items.Contains(_update))
-                menu.Items.Insert(0, _update);
-        }
-        else
-        {
-            menu.Items.Remove(_update!);
-        }
         _open!.Header = loc["tray.open"];
         _pause!.Header = store.Settings.Paused ? loc["tray.resume"] : loc["tray.pause"];
         _quit!.Header = loc["tray.quit"];

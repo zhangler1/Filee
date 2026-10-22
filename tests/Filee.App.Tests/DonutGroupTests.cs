@@ -327,6 +327,7 @@ public class DonutGroupTests
     [AvaloniaFact]
     public void A_group_about_to_open_stays_closed_once_the_donut_closed()
     {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "A donut with live presets needs the Windows radial window.");
         TestServices.EnsureInitialized("en");
         var store = AppHost.Get<UserDataStore>();
         var images = store.Profiles.Single(p => p.Id == "images");
@@ -425,25 +426,6 @@ public class DonutGroupTests
         mergeTurned.TargetFormat = "pdf";
         mergeTurned.Pdf.MergeIntoSingle = true;
         Assert.Equal("Rotate and flip work on images only", availability.Check(mergeTurned, [Filee.Core.Formats.FormatRegistry.Get("pdf")]));
-    }
-
-    [AvaloniaFact]
-    public void Tool_presets_are_available_only_for_writable_single_frame_raster_formats()
-    {
-        TestServices.EnsureInitialized("en");
-        var availability = AppHost.Get<PresetAvailability>();
-        var crop = BuiltInData.CreatePresets().Single(p => p.Id == "tool-crop");
-
-        Assert.Null(availability.Check(crop, [Filee.Core.Formats.FormatRegistry.Get("png")]));
-        Assert.Null(availability.Check(crop, [Filee.Core.Formats.FormatRegistry.Get("jpg")]));
-        Assert.Null(availability.Check(crop, [Filee.Core.Formats.FormatRegistry.Get("webp")]));
-
-        Assert.Equal("This file type isn't supported", availability.Check(crop, [Filee.Core.Formats.FormatRegistry.Get("pdf")]));
-        Assert.Equal("This file type isn't supported", availability.Check(crop, [Filee.Core.Formats.FormatRegistry.Get("svg")]));
-        Assert.Equal("This file type isn't supported", availability.Check(crop, [Filee.Core.Formats.FormatRegistry.Get("heic")]));
-
-        Assert.Equal("This file type isn't supported", availability.Check(crop, [Filee.Core.Formats.FormatRegistry.Get("png"), Filee.Core.Formats.FormatRegistry.Get("pdf")]));
-        Assert.Equal("This file type isn't supported", availability.Check(crop, []));
     }
 
     [AvaloniaFact]

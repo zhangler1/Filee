@@ -94,14 +94,11 @@ public class BuiltInDataTests
     }
 
     [Fact]
-    public void Only_compress_into_one_archive_presets_take_folders()
+    public void No_built_in_preset_packs_into_an_archive()
     {
-        var presets = BuiltInData.CreatePresets().ToDictionary(p => p.Id);
-        Assert.True(presets["zip-all"].PacksIntoOneArchive);
-        Assert.False(presets["to-zip"].PacksIntoOneArchive); // one archive for each file
-        Assert.False(presets["extract"].PacksIntoOneArchive); // a folder is no archive to pack into
-        Assert.False(presets["to-pdf"].PacksIntoOneArchive);
-        Assert.False(new Preset { TargetFormat = "pdf", Archive = { CombineIntoOne = true } }.PacksIntoOneArchive);
+        // Lite converts pictures and PDFs only: nothing packs files and folders into an archive.
+        foreach (var preset in BuiltInData.CreatePresets())
+            Assert.False(preset.PacksIntoOneArchive, preset.Id);
     }
 
     [Fact]
@@ -138,31 +135,5 @@ public class BuiltInDataTests
     {
         Assert.Equal(expected, new Preset { TargetFormat = target, Media = { SaveEveryFrame = true } }.SavesFramesOf(source));
         Assert.False(new Preset { TargetFormat = target }.SavesFramesOf(source));
-    }
-
-    [Fact]
-    public void Extract_frames_preset_is_properly_configured()
-    {
-        var presets = BuiltInData.CreatePresets();
-        var pngPreset = Assert.Single(presets, p => p.Id == "extract-frames-png" || p.NameKey == "preset.extract_frames_png");
-
-        Assert.Equal("png", pngPreset.TargetFormat);
-        Assert.True(pngPreset.Media.SaveEveryFrame);
-        Assert.Equal(1, pngPreset.Media.FrameInterval);
-
-        var jpgPreset = Assert.Single(presets, p => p.Id == "extract-frames-jpg" || p.NameKey == "preset.extract_frames_jpg");
-
-        Assert.Equal("jpg", jpgPreset.TargetFormat);
-        Assert.True(jpgPreset.Media.SaveEveryFrame);
-        Assert.Equal(1, jpgPreset.Media.FrameInterval);
-        Assert.Equal(90, jpgPreset.Image.Quality);
-
-        // Ensure they are NOT added to any default donut profile to prevent accidental frame splitting
-        var profiles = BuiltInData.CreateProfiles();
-        foreach (var profile in profiles)
-        {
-            Assert.DoesNotContain(pngPreset.Id, profile.PresetIds);
-            Assert.DoesNotContain(jpgPreset.Id, profile.PresetIds);
-        }
     }
 }

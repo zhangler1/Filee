@@ -98,7 +98,7 @@ public sealed partial class HistoryItemViewModel : ObservableObject
     private void Retry()
     {
         if (_conversions is not null && _entry.Preset is not null)
-            _conversions.Retry(_entry.Failures.Select(f => f.Source), _entry.Preset, _entry.WatchRuleId);
+            _conversions.Retry(_entry.Failures.Select(f => f.Source), _entry.Preset);
     }
 
     [RelayCommand]
@@ -131,23 +131,19 @@ public sealed partial class HomePageViewModel : ObservableObject, IDisposable
     private readonly IPlatformServices _platform;
     private readonly Services.Triggers.TriggerService? _triggers;
     private readonly ConversionService? _conversions;
-    private readonly ElevationService? _elevation;
 
     public HomePageViewModel(UserDataStore store, ILocalizer loc, IPlatformServices platform, Services.Triggers.TriggerService? triggers = null,
-        ConversionService? conversions = null, ElevationService? elevation = null)
+        ConversionService? conversions = null)
     {
         _store = store;
         _loc = loc;
         _platform = platform;
         _triggers = triggers;
         _conversions = conversions;
-        _elevation = elevation;
         if (triggers is not null)
             triggers.StatusChanged += OnTriggerStatusChanged;
-        if (elevation is not null)
-            elevation.PropertyChanged += OnElevationChanged;
         var drag = store.Settings.Triggers.FirstOrDefault(t => t.Enabled && t.Kind == TriggerKind.Drag);
-        DropHint = loc.Format(OperatingSystem.IsMacOS() ? "home.drop_hint_macos" : OperatingSystem.IsLinux() ? "home.drop_hint_linux" : "home.drop_hint", drag is null ? "—" : GestureText.Modifiers(drag.Modifiers));
+        DropHint = loc.Format("home.drop_hint", drag is null ? "—" : GestureText.Modifiers(drag.Modifiers));
         store.HistoryChanged += OnHistoryChanged;
         Reload();
     }
@@ -160,36 +156,18 @@ public sealed partial class HomePageViewModel : ObservableObject, IDisposable
         _store.HistoryChanged -= OnHistoryChanged;
         if (_triggers is not null)
             _triggers.StatusChanged -= OnTriggerStatusChanged;
-        if (_elevation is not null)
-            _elevation.PropertyChanged -= OnElevationChanged;
     }
 
     private void OnTriggerStatusChanged(object? sender, EventArgs e) => OnPropertyChanged(nameof(NeedsAccessibility));
-
-    private void OnElevationChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) =>
-        OnPropertyChanged(nameof(ElevationRestartFailed));
 
     /// <summary>
     /// Windows: Filee runs as administrator while Explorer doesn't, so drops, the Explorer menu and the shortcut can't
     /// reach it (the warning above the drop zone).
     /// </summary>
-    public bool IsElevated => _elevation?.ShellCannotReachFilee == true;
+    public bool IsElevated => Program.Elevation.ShellCannotReachFilee;
 
-    /// <summary>The restart button didn't work: the warning says what to do instead.</summary>
-    public bool ElevationRestartFailed => _elevation?.RestartFailed == true;
-
-    [RelayCommand]
-    private void RestartWithoutAdministratorRights() => _elevation?.RestartWithoutAdministratorRights();
-
-    /// <summary>macOS: gestures wait for the Accessibility permission (the reminder above the drop zone).</summary>
-    public bool NeedsAccessibility => _triggers?.NeedsPermission == true;
-
-    [RelayCommand]
-    private void OpenAccessibility()
-    {
-        if (OperatingSystem.IsMacOS() && _platform is Filee.Platform.MacOS.MacOSPlatformServices mac)
-            mac.OpenAccessibilitySettings();
-    }
+    /// <summary>Gestures wait for a permission Filee already has on Windows; always false in Lite.</summary>
+    public bool NeedsAccessibility => _triggers?.NeedsPermission == true && OperatingSystem.IsMacOS();
 
     public string DropHint { get; }
 

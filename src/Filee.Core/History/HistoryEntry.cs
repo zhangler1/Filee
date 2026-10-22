@@ -16,15 +16,12 @@ public sealed class HistoryEntry
     public List<string> Sources { get; set; } = [];
     public List<string> Outputs { get; set; } = [];
 
-    /// <summary>The watch folder (<see cref="Watching.WatchRule.Id"/>) the job came from, or null.</summary>
-    public string? WatchRuleId { get; set; }
-
     /// <summary>Files that failed, with the reason.</summary>
     public List<HistoryFailure> Failures { get; set; } = [];
 
     /// <summary>
-    /// The preset as the job ran it (save location already decided, a watch folder's output folder included), kept
-    /// when files failed: they can be converted again the same way even after the preset was changed or deleted.
+    /// The preset as the job ran it (save location already decided), kept when files failed: they can be converted
+    /// again the same way even after the preset was changed or deleted.
     /// </summary>
     public Preset? Preset { get; set; }
 

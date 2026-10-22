@@ -1,15 +1,15 @@
-// Entry point. Order matters:
+// Entry point, in this order:
 //  0. The log and the handlers for unhandled exceptions, so even a start that fails leaves a line; then one line
 //     describing this launch (version, path, rights, OS).
-//  1. Single instance: a second launch (e.g. from the Explorer context menu) forwards its arguments
-//     to the running instance and exits. When it can't (the running Filee is elevated, or hung) it says so.
-//  2. Installer commands (--quit, --uninstall-cleanup) run without any window.
+//  1. Single instance: a second launch forwards its arguments to the running instance and exits. When it can't (the
+//     running Filee is elevated, or hung) it says so.
+//  2. --quit (from a script or shortcut) runs without any window.
 //  3. Start Avalonia. The app lives in the tray, so it only exits via the tray "Quit" command (or --quit).
+// Lite: Windows only, no installer commands, no embedded fonts (system fonts only).
 
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Media;
 using Filee.App.Services;
 using Filee.Core.Platform;
 using Filee.Core.Settings;
@@ -26,20 +26,20 @@ internal static class Program
     /// <summary>Owned by the first instance for its whole lifetime.</summary>
     public static SingleInstance? Instance { get; private set; }
 
-    /// <summary>How long the installer waits for a running Filee to save and exit.</summary>
+    /// <summary>How long to wait for a running Filee to save and exit.</summary>
     private static readonly TimeSpan QuitTimeout = TimeSpan.FromSeconds(20);
 
     /// <summary>How long a later launch waits for a Filee that is still starting to take its arguments.</summary>
     private static readonly TimeSpan ForwardTimeout = TimeSpan.FromSeconds(30);
 
-    /// <summary>Integrity levels of this process and Explorer, read at start-up (Unknown off Windows).</summary>
+    /// <summary>Integrity levels of this process and Explorer, read at start-up.</summary>
     public static ElevationState Elevation { get; private set; } = ElevationState.Unknown;
 
     /// <summary>Program's own log, set up before anything else so even a failed start leaves a line.</summary>
     internal static ILogger Log { get; private set; } = NullLogger.Instance;
 
-    /// <summary>Settings loaded before macOS initializes its Dock policy.</summary>
-    internal static UserDataStore? PreloadedStore { get; private set; }
+    /// <summary>The running Filee's version.</summary>
+    public static string Version => typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "?";
 
     /// <summary>Raised on the UI thread when the single-instance lock was taken again after a failed restart.</summary>
     public static event Action<SingleInstance>? InstanceAcquired;
@@ -48,14 +48,11 @@ internal static class Program
     public static int Main(string[] args)
     {
         Options = CommandLine.Parse(args);
-        PreloadedStore = null;
-        Log = StartupDiagnostics.CreateEarlyLogger(Path.Combine(UserDataStore.DefaultDirectory, "logs"), out var earlyStoreLogger);
+        Log = StartupDiagnostics.CreateEarlyLogger(Path.Combine(UserDataStore.DefaultDirectory, "logs"), out _);
         StartupDiagnostics.LogUnhandledExceptions(Log);
         Elevation = Filee.Platform.Windows.Elevation.Probe();
-        var startup = StartupDiagnostics.Describe(UpdateService.CurrentVersion, Environment.ProcessPath,
-            StartupDiagnostics.InstallKind(UpdateService.IsInstalled, UpdateService.IsReleaseBuild), Elevation,
-            StartupDiagnostics.OperatingSystemText(), args.Length);
-        var installerCommand = Options.Quit || Options.UninstallCleanup;
+        var startup = StartupDiagnostics.Describe(Version, Environment.ProcessPath,
+            "lite", Elevation, StartupDiagnostics.OperatingSystemText(), args.Length);
 
         SingleInstance instance;
         try
@@ -64,26 +61,25 @@ internal static class Program
         }
         catch (UnauthorizedAccessException ex)
         {
-            // The lock belongs to a Filee running as administrator: this process may not even open it. Before this
-            // was caught, Filee ended here without a word (Explorer's menu showed a busy cursor, then nothing).
+            // The lock belongs to a Filee running as administrator: this process may not even open it.
             Log.LogWarning("{Startup}", startup);
             Log.LogWarning(ex, "Another Filee is running with administrator rights; this launch can't reach it");
-            if (!installerCommand)
+            if (!Options.Quit)
                 TellUserOnce("startup.elevated_other");
             return 1;
         }
         Instance = instance;
-        if (installerCommand)
+        if (Options.Quit)
         {
             Log.LogInformation("{Startup}", startup);
-            return RunInstallerCommand(instance);
+            return RunQuitCommand(instance);
         }
         if (!instance.IsFirst)
         {
             var result = instance.Forward(args, ForwardTimeout);
             if (result != ForwardResult.Delivered)
             {
-                // Logged only when it failed: Explorer starts one Filee per selected file.
+                // Logged only when it failed: another program may start one Filee per selected file.
                 Log.LogWarning("{Startup}", startup);
                 Log.LogWarning("Could not hand {Count} argument(s) to the running Filee: {Result}", args.Length, result);
                 TellUserOnce(result == ForwardResult.AccessDenied ? "startup.elevated_other" : "startup.no_answer");
@@ -99,21 +95,7 @@ internal static class Program
 
         try
         {
-            if (OperatingSystem.IsMacOS())
-            {
-                PreloadedStore = new UserDataStore(UserDataStore.DefaultDirectory, earlyStoreLogger);
-                PreloadedStore.Load();
-            }
             return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, ShutdownMode.OnExplicitShutdown);
-        }
-        catch (InvalidOperationException ex) when (OperatingSystem.IsMacOS() && ex.Message.Contains("RenderTimer", StringComparison.Ordinal))
-        {
-            // The window system has no display link for this screen: a Mac in a virtual machine without graphics
-            // acceleration (VMware). Avalonia can't draw there; say so instead of quitting without a word.
-            StartupFailure.Report(ex, "Filee can't open its window on this Mac: macOS reports no display it can draw on. " +
-                                      "This happens in virtual machines without graphics acceleration (such as VMware). " +
-                                      "The filee command still works in Terminal.");
-            return 1;
         }
         finally
         {
@@ -153,8 +135,8 @@ internal static class Program
     }
 
     /// <summary>
-    /// Shows a launch problem in a system message box (Filee's own windows aren't available in this process). Explorer
-    /// starts one Filee per selected file: a lock shared between them lets only the first one show it.
+    /// Shows a launch problem in a system message box (Filee's own windows aren't available in this process). A lock
+    /// shared between launches lets only the first one show it.
     /// </summary>
     private static void TellUserOnce(string key)
     {
@@ -181,11 +163,9 @@ internal static class Program
     }
 
     /// <summary>
-    /// <c>--quit</c> and <c>--uninstall-cleanup</c> from the installer: ask the running Filee (if any) to exit and wait
-    /// for it, so its files can be replaced or removed; then clean up for the uninstaller. Exit code 1 when Filee is
-    /// still running.
+    /// <c>--quit</c>: ask the running Filee (if any) to exit and wait for it. Exit code 1 when Filee is still running.
     /// </summary>
-    private static int RunInstallerCommand(SingleInstance instance)
+    private static int RunQuitCommand(SingleInstance instance)
     {
         using (instance)
         {
@@ -199,11 +179,7 @@ internal static class Program
                     return 1;
             }
             // The mutex is released just before the process ends: wait for the end, so Filee.exe is no longer in use.
-            if (!WaitForOtherProcessesOfThisExe(deadline))
-                return 1;
-            if (Options.UninstallCleanup)
-                return UninstallCleanup.Run() ? 0 : 1;
-            return 0;
+            return WaitForOtherProcessesOfThisExe(deadline) ? 0 : 1;
         }
     }
 
@@ -211,23 +187,6 @@ internal static class Program
     {
         if (Environment.ProcessPath is not { } exe)
             return true;
-        if (!OperatingSystem.IsWindows())
-        {
-            // Process.WaitForExit counts a process that has ended but not been reaped by its parent (a zombie) as still
-            // running, so it would wait for the deadline. Such a process no longer has an executable path: look again
-            // until no other process runs this exe.
-            while (true)
-            {
-                var others = OtherProcessesOfThisExe(exe);
-                var running = others.Count > 0;
-                others.ForEach(p => p.Dispose());
-                if (!running)
-                    return true;
-                if (DateTime.UtcNow >= deadline)
-                    return false;
-                Thread.Sleep(100);
-            }
-        }
         foreach (var process in OtherProcessesOfThisExe(exe))
         {
             using (process)
@@ -275,14 +234,11 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp()
     {
         var builder = AppBuilder.Configure<App>().UsePlatformDetect();
-        if (OperatingSystem.IsMacOS())
-            builder = builder.With(new MacOSPlatformOptions { ShowInDock = PreloadedStore?.Settings.ShowInDock ?? true });
         if (OperatingSystem.IsWindows())
             builder = builder.With(WindowsRendering.Options(
                 WindowsRendering.Normalize(Environment.GetEnvironmentVariable(WindowsRendering.Variable)),
                 adapters => Log.LogInformation("Graphics adapters: {Adapters}", adapters)));
         builder = builder
-            .ConfigureFonts(fonts => fonts.AddFontCollection(new FileeFontCollection()))
 #if DEBUG
             .WithDeveloperTools()
 #endif
@@ -291,9 +247,3 @@ internal static class Program
         return builder;
     }
 }
-
-/// <summary>Embedded Noto fonts: <c>fonts:Filee#Noto Sans</c>, <c>#Noto Sans JP</c>, <c>#Noto Sans KR</c>,
-/// <c>#Noto Sans SC</c>, <c>#Noto Sans Devanagari</c>, <c>#Noto Sans Arabic</c>.</summary>
-internal sealed class FileeFontCollection() : Avalonia.Media.Fonts.EmbeddedFontCollection(
-    new Uri("fonts:Filee", UriKind.Absolute),
-    new Uri("avares://Filee/Assets/Fonts", UriKind.Absolute));

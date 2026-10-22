@@ -1,4 +1,5 @@
 // Composition root: every long-lived service is created here. Views get services through AppHost.Get<T>().
+// Lite: Windows only, no engine downloads, updates, watch folders or browser drags.
 
 using Filee.App.Services.Triggers;
 using Filee.App.ViewModels;
@@ -6,11 +7,8 @@ using Filee.Core.Conversion;
 using Filee.Core.Localization;
 using Filee.Core.Platform;
 using Filee.Core.Settings;
-using Filee.Core.Web;
 using Filee.Engines;
 using Filee.Engines.Infrastructure;
-using Filee.Platform.Linux;
-using Filee.Platform.MacOS;
 using Filee.Platform.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -35,17 +33,12 @@ public static class AppHost
             .SetMinimumLevel(LogLevel.Information));
 
         services.AddSingleton(sp => preloadedStore ?? new UserDataStore(dataDir, sp.GetRequiredService<ILogger<UserDataStore>>()));
-        services.AddSingleton<IPlatformServices>(_ =>
-            OperatingSystem.IsWindows() ? new WindowsPlatformServices()
-            : OperatingSystem.IsMacOS() ? new MacOSPlatformServices()
-            : OperatingSystem.IsLinux() ? new LinuxPlatformServices()
-            : new NullPlatformServices());
+        services.AddSingleton<IPlatformServices>(_ => new WindowsPlatformServices());
 
         services.AddSingleton<LocalizationService>();
         services.AddSingleton<ILocalizer>(sp => sp.GetRequiredService<LocalizationService>());
         services.AddSingleton<ThemeService>();
         services.AddSingleton<SystemIntegrationService>();
-        services.AddSingleton<ElevationService>();
 
         // Conversion engines
         services.AddSingleton(_ => new EngineEnvironment(dataDir));
@@ -54,24 +47,16 @@ public static class AppHost
         services.AddSingleton(sp => new JobQueue(
             sp.GetRequiredService<ConverterCatalog>(),
             EngineRegistry.FindPdfMerger(sp.GetRequiredService<IReadOnlyList<IConverter>>()),
-            sp.GetRequiredService<ILogger<JobQueue>>(),
-            EngineRegistry.FindFileCombiner(sp.GetRequiredService<IReadOnlyList<IConverter>>()),
-            EngineRegistry.FindTiffMerger(sp.GetRequiredService<IReadOnlyList<IConverter>>())));
+            sp.GetRequiredService<ILogger<JobQueue>>()));
 
-        // Files dragged from a browser with only an address are downloaded without the browser's cookies.
-        services.AddSingleton(_ => new WebDownloader(userAgent: $"Filee/{typeof(AppHost).Assembly.GetName().Version?.ToString(3)}"));
-        services.AddSingleton<EngineDownloadService>();
         services.AddSingleton<PresetAvailability>();
         services.AddSingleton<RadialViewModel>();
         services.AddSingleton<ConversionService>();
-        services.AddSingleton<WatchFolderService>();
         services.AddSingleton<TriggerService>();
         services.AddSingleton<RadialController>();
         services.AddSingleton<TrayService>();
-        services.AddSingleton<UpdateService>();
         services.AddSingleton<MemoryTrimmer>();
         services.AddSingleton<WindowService>();
-        services.AddSingleton<WhatsNewService>();
 
         _services = services.BuildServiceProvider();
         return _services;

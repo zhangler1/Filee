@@ -32,13 +32,11 @@ public partial class LocalizationTests
     }
 
     [Fact]
-    public void Arabic_is_offered_under_its_own_name_and_reads_right_to_left()
+    public void Chinese_is_offered_under_its_own_name()
     {
-        Assert.Contains(("ar", "العربية"), LocalizationService.Languages);
-        Assert.Equal("ar", LocalizationService.Resolve("AR"));
-        Assert.Contains("fonts:Filee#Noto Sans Arabic", ThemeService.FontFamilies("ar"));
-        Assert.True(SoftPalette.IsRightToLeft("ar"));
-        Assert.All(LocalizationService.Languages.Where(l => l.Code != "ar"), l => Assert.False(SoftPalette.IsRightToLeft(l.Code)));
+        Assert.Contains(("zh-CN", "简体中文"), LocalizationService.Languages);
+        Assert.Equal("zh-CN", LocalizationService.Resolve("zh"));
+        Assert.False(SoftPalette.IsRightToLeft("zh-CN"));
     }
 
     [Theory]
@@ -78,35 +76,17 @@ public partial class LocalizationTests
         Assert.Empty(missing);
     }
 
-    [Fact]
-    public void Russian_is_offered_under_its_own_name()
-    {
-        Assert.Contains(("ru", "Русский"), LocalizationService.Languages);
-        Assert.Equal("ru", LocalizationService.Resolve("RU"));
-    }
-
-    [Fact]
-    public void Japanese_is_offered_under_its_own_name()
-    {
-        Assert.Contains(("ja", "日本語"), LocalizationService.Languages);
-        Assert.Equal("ja", LocalizationService.Resolve("JA"));
-    }
-
-    /// <summary>Han characters look different in Japanese, Korean and Chinese fonts: the UI language's come first.</summary>
+    /// <summary>Han characters look different in Chinese, Japanese and Korean fonts: the UI language's comes first.</summary>
     [Theory]
-    [InlineData("ja", "Noto Sans JP", "Yu Gothic UI")]
-    [InlineData("ko", "Noto Sans KR", "Malgun Gothic")]
-    [InlineData("zh-CN", "Noto Sans SC", "Microsoft YaHei")]
-    [InlineData("en", "Noto Sans KR", "Malgun Gothic")]
-    public void The_ui_languages_cjk_fonts_come_first(string language, string embedded, string system)
+    [InlineData("zh-CN", "Microsoft YaHei")]
+    [InlineData("ja", "Yu Gothic UI")]
+    [InlineData("en", "Malgun Gothic")]
+    public void The_ui_languages_cjk_font_comes_first(string language, string cjk)
     {
-        var families = ThemeService.FontFamilies(language).Split(", ").Select(f => f.Replace("fonts:Filee#", "")).ToList();
-        string[] embeddedCjk = ["Noto Sans JP", "Noto Sans KR", "Noto Sans SC"];
-        string[] systemCjk = ["Yu Gothic UI", "Malgun Gothic", "Microsoft YaHei"];
+        var families = ThemeService.FontFamilies(language).Split(", ").ToList();
 
-        Assert.Equal(embedded, families.First(embeddedCjk.Contains));
-        Assert.Equal(system, families.First(systemCjk.Contains));
-        Assert.True(embeddedCjk.Max(families.IndexOf) < systemCjk.Min(families.IndexOf), "embedded fonts before system ones");
+        Assert.Equal("Segoe UI", families[0]); // Windows' own Latin UI font, first for every language
+        Assert.Equal(cjk, families[1]);
     }
 
     private static HashSet<string> Placeholders(string text) =>

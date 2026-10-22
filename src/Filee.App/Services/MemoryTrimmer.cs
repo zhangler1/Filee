@@ -4,7 +4,6 @@
 
 using System.Diagnostics;
 using Filee.Core.Conversion;
-using Filee.Engines.Infrastructure;
 using Filee.Platform.Windows;
 using Microsoft.Extensions.Logging;
 
@@ -81,7 +80,6 @@ public sealed class MemoryTrimmer : IDisposable
         {
             var watch = Stopwatch.StartNew();
             var before = PrivateMegabytes();
-            EngineCaches.Release();
             // Without compacting: garbage is freed and empty heap regions are decommitted all the same. Compaction was
             // once blamed for a CI crash in Skia (sk_pngencoder_encode) after a trim; the cause was tests that let a
             // captured frame be collected while Avalonia encoded it (WriteableBitmap.Save encodes a snapshot that

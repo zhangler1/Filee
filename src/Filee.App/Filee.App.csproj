@@ -16,8 +16,6 @@
     <ProjectReference Include="..\Filee.Core\Filee.Core.csproj" />
     <ProjectReference Include="..\Filee.Engines\Filee.Engines.csproj" />
     <ProjectReference Include="..\Filee.Platform.Windows\Filee.Platform.Windows.csproj" />
-    <ProjectReference Include="..\Filee.Platform.Linux\Filee.Platform.Linux.csproj" />
-    <ProjectReference Include="..\Filee.Platform.MacOS\Filee.Platform.MacOS.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,15 +28,12 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" />
-    <PackageReference Include="Markdig" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="SharpHook" />
   </ItemGroup>
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
-    <!-- Shown on the About page. -->
-    <AvaloniaResource Include="..\..\THIRD-PARTY-NOTICES.md" Link="Assets\THIRD-PARTY-NOTICES.md" />
   </ItemGroup>
 
   <ItemGroup>

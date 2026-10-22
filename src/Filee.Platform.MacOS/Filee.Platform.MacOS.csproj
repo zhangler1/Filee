@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <RootNamespace>Filee.Platform.MacOS</RootNamespace>
-  </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Filee.Core\Filee.Core.csproj" />
-    <InternalsVisibleTo Include="Filee.Platform.Tests" />
-  </ItemGroup>
-</Project>

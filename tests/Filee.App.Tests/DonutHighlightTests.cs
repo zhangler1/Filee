@@ -15,7 +15,7 @@ public class DonutHighlightTests
     [AvaloniaFact]
     public void A_lost_animation_frame_does_not_keep_the_slice_dark()
     {
-        TestServices.EnsureInitialized("ko");
+        TestServices.EnsureInitialized("zh-CN");
         var donut = new DonutMenu
         {
             Items = new[] { "PNG", "JPG", "WEBP", "PDF" }.Select(l => new DonutItem { Id = l, Label = l }).ToList(),
@@ -29,7 +29,9 @@ public class DonutHighlightTests
         Set(donut, "_lastTick", Environment.TickCount64 - DonutMenu.StalledLoopMs * 4);
 
         donut.SetExternalHighlight(2);
-        for (var i = 0; i < 90 && donut.LitAmount(2) < 0.9; i++)
+        // The loop ends as soon as the slice is lit; on a headless runner whose frames advance time slowly it
+        // simply takes more of them, so the generous limit only ever costs the failing case.
+        for (var i = 0; i < 900 && donut.LitAmount(2) < 0.9; i++)
         {
             AvaloniaHeadlessPlatform.ForceRenderTimerTick();
             Dispatcher.UIThread.RunJobs();
@@ -42,7 +44,7 @@ public class DonutHighlightTests
     [AvaloniaFact]
     public void An_opening_donut_appears_even_when_no_frame_ever_comes()
     {
-        TestServices.EnsureInitialized("ko");
+        TestServices.EnsureInitialized("zh-CN");
         var donut = new DonutMenu
         {
             Items = new[] { "PNG", "JPG", "WEBP", "PDF" }.Select(l => new DonutItem { Id = l, Label = l }).ToList(),
@@ -70,7 +72,7 @@ public class DonutHighlightTests
     [AvaloniaFact]
     public void A_highlight_settles_without_dipping_below_zero()
     {
-        TestServices.EnsureInitialized("ko");
+        TestServices.EnsureInitialized("zh-CN");
         var donut = new DonutMenu
         {
             Items = new[] { "PNG", "JPG", "WEBP" }.Select(l => new DonutItem { Id = l, Label = l }).ToList(),
@@ -94,7 +96,7 @@ public class DonutHighlightTests
     [AvaloniaFact]
     public void Highlights_settle_when_frames_come_late()
     {
-        TestServices.EnsureInitialized("ko");
+        TestServices.EnsureInitialized("zh-CN");
         Filee.App.Services.Motion.Configure(false, () => false);
         var donut = new DonutMenu
         {

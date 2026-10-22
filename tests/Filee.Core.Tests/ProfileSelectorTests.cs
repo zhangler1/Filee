@@ -22,18 +22,11 @@ public class ProfileSelectorTests
     public void Picks_profile_matching_all_files() => Assert.Equal("images", Pick(_builtIn, "a.jpg", "b.PNG"));
 
     [Theory]
-    [InlineData("pdf", "a.pdf")]
-    [InlineData("archives", "a.tar.gz", "b.zip")]
-    [InlineData("video", @"C:\clips\a.MP4", @"C:\clips\b.mkv")]
-    [InlineData("text", "notes.md", "readme.txt")]
-    [InlineData("text", "todo.org", "paper.typ", "guide.adoc")]
-    [InlineData("ebooks", "novel.kepub.epub", "novel.epub")]
-    [InlineData("office", "letter.fodt", "memo.602")]
-    [InlineData("spreadsheets", "budget.xlt", "flat.fods")]
-    [InlineData("data", "a.json", "b.YML", "c.toml", "d.xml")]
-    [InlineData("data", "contacts.vcf")]
-    [InlineData("spreadsheets", "table.csv")]
-    [InlineData("office", "mail.msg", "mail.eml")]
+    [InlineData("images", "photo.jpg", "logo.WEBP")]
+    [InlineData("images", "icon.ico")]
+    [InlineData("images", "scan.bmp", "anim.gif", "photo.jfif")]
+    [InlineData("pdf", "paper.PDF")]
+    [InlineData("pdf", "report.pdf", "scan 2.pdf")]
     public void Built_in_profiles_take_their_files(string expected, params string[] files) =>
         Assert.Equal(expected, Pick(_builtIn, files));
 

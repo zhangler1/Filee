@@ -1,9 +1,19 @@
 using Filee.App.Services.Triggers;
 using Filee.App.ViewModels.Pages;
+using Filee.Core.Localization;
 using SharpHook;
 using SharpHook.Data;
 
 namespace Filee.App.Tests;
+
+/// <summary>Returns keys (and "key|arg|arg" for formats) so tests can check which message was chosen.</summary>
+internal sealed class KeyLocalizer : ILocalizer
+{
+    public string Language => "en";
+    public string this[string key] => key;
+    public string Format(string key, params object[] args) => string.Join("|", [key, .. args.Select(a => a.ToString())]);
+    public event EventHandler? LanguageChanged { add { } remove { } }
+}
 
 public class HookFailureTests
 {

@@ -124,8 +124,6 @@ public sealed class AppSettings
     /// <summary>Show the Explorer "Convert with Filee" context menu entry.</summary>
     public bool ContextMenuEnabled { get; set; } = true;
 
-    public bool CheckForUpdates { get; set; } = true;
-
     /// <summary>What closing the main window does. A value from a newer Filee reads as <see cref="CloseAction.Ask"/>.</summary>
     [JsonConverter(typeof(LenientEnumJsonConverter<CloseAction>))]
     public CloseAction CloseAction { get; set; } = CloseAction.Ask;
@@ -155,18 +153,6 @@ public sealed class AppSettings
     [JsonConverter(typeof(IconPreferenceJsonConverter))]
     public bool ShowMenuBarIcon { get; set; } = true;
 
-    /// <summary>Newest version the user was already told about, so the update notice shows once per release.</summary>
-    public string? NotifiedUpdateVersion { get; set; }
-
-    /// <summary>
-    /// The version whose "What's new" slides were last shown (or that was installed fresh, which needs none). Null in
-    /// settings from before the slides existed: Filee was updated from an older version.
-    /// </summary>
-    public string? WhatsNewSeenVersion { get; set; }
-
-    /// <summary>Engine package id → the new version the engine update notice was shown for (once per version).</summary>
-    public Dictionary<string, string> NotifiedEngineVersions { get; set; } = [];
-
     /// <summary>Temporarily disable all trigger gestures (tray "Pause").</summary>
     public bool Paused { get; set; }
 
@@ -180,79 +166,27 @@ public sealed class AppSettings
     public List<string> ExcludedProcesses { get; set; } = [];
 
     /// <summary>Engine ids in preferred order (see <see cref="Conversion.ConverterCatalog.Priority"/>).</summary>
-    public List<string> EnginePriority { get; set; } =
-    [
-        "magick", "pdfium", "pdfsharp", "rhwp", "unhwp", "markdown", "spreadsheet", "ooxml", "hwpx-writer", "docx-writer",
-        "pdf-text", "pdf-slides", "email", "data", "vector", "icns", "font", "cad", "model3d", "geo", "archive", "ebook",
-        "subtitle", "wic", "ffmpeg", "pandoc", "ghostscript", "calibre", "libreoffice",
-    ];
+    public List<string> EnginePriority { get; set; } = ["skia", "pdfium", "pdfsharp"];
 
     /// <summary>Set once the first-run welcome has been shown.</summary>
     public bool FirstRunCompleted { get; set; }
 
-    /// <summary>Conversions that succeeded completely, counted until the feedback card has been shown.</summary>
-    public int SuccessfulConversions { get; set; }
-
-    /// <summary>Set once the "Is Filee helping you?" card (GitHub star / feedback) has been shown.</summary>
-    public bool FeedbackPromptShown { get; set; }
-
-    /// <summary>Folders whose new files are converted automatically (Settings → Watch folders).</summary>
-    public List<Watching.WatchRule> WatchFolders { get; set; } = [];
-
     /// <summary>Where presets set to "Default" save (Settings → General).</summary>
     public DefaultOutputSettings DefaultOutput { get; set; } = new();
-
-    /// <summary>Where files dragged from a web browser are saved (Settings → General).</summary>
-    public BrowserDropSettings BrowserDrops { get; set; } = new();
-
-    /// <summary>
-    /// Optional engines the user already has: package id ("ffmpeg", "calibre", …) → the program they picked. Used
-    /// instead of Filee's download (Settings → Engines).
-    /// </summary>
-    public Dictionary<string, string> EngineOwnCopies { get; set; } = [];
-
-    /// <summary>
-    /// With LibreOffice installed, presentations (PPTX, PPT, ODP) → PDF go through it instead of the built-in route
-    /// (HWPX writer and rhwp): slide backgrounds and shape positions come out as in PowerPoint.
-    /// </summary>
-    public bool LibreOfficeForSlides { get; set; } = true;
-
-    /// <summary>
-    /// With LibreOffice and H2Orestart installed, HWP / HWPX → PDF go through it instead of rhwp: a way around a
-    /// document rhwp lays out wrong (each engine gets different documents right).
-    /// </summary>
-    public bool LibreOfficeForHwp { get; set; }
-
-    /// <summary>
-    /// With LibreOffice installed, Word documents (DOCX, DOC, ODT, RTF) → PDF go through it instead of the built-in
-    /// route: Chinese punctuation and line-start rules, fonts the built-in route lacks.
-    /// </summary>
-    public bool LibreOfficeForDocuments { get; set; }
-
-    /// <summary>
-    /// With LibreOffice installed, spreadsheets (XLSX, XLS, ODS, CSV) → PDF go through it: print areas, page setup and
-    /// page breaks as Excel prints them.
-    /// </summary>
-    public bool LibreOfficeForSheets { get; set; }
 
     /// <summary>Every conversion keeps the created and modified dates of the original, whatever the preset says.</summary>
     public bool KeepFileDates { get; set; }
 
-    /// <summary>Every geospatial conversion is saved as a ZIP, whatever the preset says (see <see cref="OutputRule.ZipResult"/>).</summary>
-    public bool ZipGeoResults { get; set; }
-
     /// <summary>
     /// Returns <paramref name="preset"/> itself, or a copy with the app-wide output settings applied: it saves to
     /// <see cref="DefaultOutput"/> when the preset's location is <see cref="OutputLocation.Default"/>, and keeps the
-    /// original dates when <see cref="KeepFileDates"/> is on and is saved as a ZIP when <see cref="ZipGeoResults"/> is on and the
-    /// target is geospatial. Name pattern and conflict handling stay the preset's.
+    /// original dates when <see cref="KeepFileDates"/> is on. Name pattern and conflict handling stay the preset's.
     /// </summary>
     public Preset WithDefaultOutput(Preset preset)
     {
         var location = preset.Output.Location == OutputLocation.Default;
         var dates = KeepFileDates && !preset.Output.KeepDates;
-        var zip = ZipGeoResults && !preset.Output.ZipResult && Formats.FormatRegistry.FindById(preset.TargetFormat)?.Category == Formats.FormatCategory.Geo;
-        if (!location && !dates && !zip)
+        if (!location && !dates)
             return preset;
         var copy = preset.Clone();
         if (location)
@@ -263,8 +197,6 @@ public sealed class AppSettings
         }
         if (dates)
             copy.Output.KeepDates = true;
-        if (zip)
-            copy.Output.ZipResult = true;
         return copy;
     }
 }
@@ -294,14 +226,4 @@ public sealed class DefaultOutputSettings
     public string SubfolderName { get; set; } = "converted";
 
     public string CustomFolder { get; set; } = "";
-}
-
-/// <summary>Files dragged out of a web browser (Settings → General).</summary>
-public sealed class BrowserDropSettings
-{
-    /// <summary>Where they are saved; empty means the user's Downloads folder (looked up each time, as it can move).</summary>
-    public string Folder { get; set; } = "";
-
-    /// <summary>Keep only the converted file: the original goes into a work folder and is deleted after the conversion.</summary>
-    public bool SaveOnlyConverted { get; set; }
 }

@@ -7,7 +7,7 @@ using Filee.Core.Presets;
 
 namespace Filee.App.Services;
 
-public sealed class PresetAvailability(ConverterCatalog catalog, ILocalizer loc, EngineDownloadService downloads)
+public sealed class PresetAvailability(ConverterCatalog catalog, ILocalizer loc)
 {
     private static readonly HashSet<string> WritableSingleFrameRasterFormats =
     [
@@ -61,11 +61,9 @@ public sealed class PresetAvailability(ConverterCatalog catalog, ILocalizer loc,
 
         if (Possible(catalog.CreatePlanner()))
             return null;
-        // It converts these files, just without turning them: say that, not "no engine" or "download one".
+        // It converts these files, just without turning them: say that, not "no engine".
         if (copiesUnturned)
             return loc["error.cannot_turn"];
-        return downloads.PackageEnabling(Possible) is { } package
-            ? loc.Format("engine.reason.needs_package", package.Name)
-            : loc["error.no_route"];
+        return loc["error.no_route"];
     }
 }

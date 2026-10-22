@@ -94,24 +94,6 @@ public class DefaultOutputTests
     }
 
     [Fact]
-    public void Version_7_presets_on_the_source_folder_follow_the_default()
-    {
-        // As written by 1.3.1: "same folder" was the only default, a user preset chose a fixed folder.
-        var presets = BuiltInData.CreatePresets();
-        foreach (var preset in presets.Where(p => p.Output.Location == OutputLocation.Default))
-            preset.Output.Location = OutputLocation.SameFolder;
-        presets.Add(new Preset { Id = "mine", Output = { Location = OutputLocation.CustomFolder, CustomFolder = @"D:\out" } });
-        var profiles = BuiltInData.CreateProfiles();
-
-        Assert.True(SettingsMigrations.ApplyToLibrary(7, presets, profiles));
-
-        Assert.Equal(OutputLocation.Default, presets.Single(p => p.Id == "to-png").Output.Location);
-        Assert.Equal(OutputLocation.Subfolder, presets.Single(p => p.Id == "pdf-split").Output.Location);
-        Assert.Equal(OutputLocation.CustomFolder, presets.Single(p => p.Id == "mine").Output.Location);
-        Assert.False(SettingsMigrations.ApplyToLibrary(7, presets, profiles)); // once only
-    }
-
-    [Fact]
     public void Default_save_location_survives_a_restart()
     {
         using var dir = new TempDir();

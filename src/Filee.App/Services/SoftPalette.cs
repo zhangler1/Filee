@@ -17,18 +17,13 @@ internal static class SoftPalette
     /// <summary>The default corner radius (ThemeSettings.CornerRadius).</summary>
     public const double DefaultCornerRadius = 16;
 
-    /// <summary>Embedded Noto fonts (see build/fetch-fonts.ps1). Missing files fall back to system fonts.</summary>
-    private const string Latin = "fonts:Filee#Noto Sans";
-    private const string Arabic = "fonts:Filee#Noto Sans Arabic";
-    private const string Devanagari = "fonts:Filee#Noto Sans Devanagari";
+    /// <summary>System fonts only (Lite ships none): Windows' own UI fonts, with the UI language's CJK font first.</summary>
+    private const string Latin = "Segoe UI";
 
-    /// <summary>Each CJK region's embedded font and its system fonts (Windows, then macOS).</summary>
-    private static readonly (string Embedded, string System) Japanese =
-        ("fonts:Filee#Noto Sans JP", "Yu Gothic UI, Meiryo, Hiragino Sans");
-    private static readonly (string Embedded, string System) Korean =
-        ("fonts:Filee#Noto Sans KR", "Malgun Gothic, Apple SD Gothic Neo");
-    private static readonly (string Embedded, string System) Chinese =
-        ("fonts:Filee#Noto Sans SC", "Microsoft YaHei, PingFang SC");
+    /// <summary>Each CJK region's system font (Windows).</summary>
+    private static readonly string Japanese = "Yu Gothic UI, Meiryo";
+    private static readonly string Korean = "Malgun Gothic";
+    private static readonly string Chinese = "Microsoft YaHei";
 
     /// <summary>Accent colour + derived shades. Fluent controls read the System* keys.</summary>
     public static void ApplyAccent(IResourceDictionary res, Color accent)
@@ -61,31 +56,19 @@ internal static class SoftPalette
 
     /// <summary>
     /// The UI font chain. Han characters look different in Japanese, Korean and Chinese fonts, so the UI language's
-    /// CJK fonts come first, embedded and system ones alike; other languages keep Korean first.
+    /// CJK font comes first; other languages keep Korean first.
     /// </summary>
     public static string FontFamilies(string language)
     {
-        (string Embedded, string System)[] cjk =
+        string[] cjk =
             language.StartsWith("ja", StringComparison.OrdinalIgnoreCase) ? [Japanese, Korean, Chinese]
             : language.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? [Chinese, Korean, Japanese]
             : [Korean, Chinese, Japanese];
-        // Noto Sans comes first: the first face also draws the trimming ellipsis, which Noto Sans Arabic lacks.
-        return $"{Latin}, {Arabic}, {Devanagari}, {string.Join(", ", cjk.Select(f => f.Embedded))}, Segoe UI, Nirmala UI, "
-            + $"{string.Join(", ", cjk.Select(f => f.System))}, Kohinoor Devanagari, Geeza Pro, sans-serif";
+        return $"{Latin}, {string.Join(", ", cjk)}, sans-serif";
     }
 
-    /// <summary>
-    /// The font chain from Windows' own UI fonts only (no embedded fonts), with the UI language's CJK font first: what
-    /// the installer uses. Every Windows 10 1809+ has these, with bold faces.
-    /// </summary>
-    public static string SystemFontFamilies(string language)
-    {
-        (string Embedded, string System)[] cjk =
-            language.StartsWith("ja", StringComparison.OrdinalIgnoreCase) ? [Japanese, Korean, Chinese]
-            : language.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? [Chinese, Korean, Japanese]
-            : [Korean, Chinese, Japanese];
-        return $"Segoe UI, Nirmala UI, {string.Join(", ", cjk.Select(f => f.System))}, sans-serif";
-    }
+    /// <summary>The font chain from Windows' own UI fonts only, with the UI language's CJK font first.</summary>
+    public static string SystemFontFamilies(string language) => FontFamilies(language);
 
     /// <summary>The resource Soft.axaml's Window style takes <see cref="Visual.FlowDirection"/> from.</summary>
     public const string FlowDirectionKey = "AppFlowDirection";

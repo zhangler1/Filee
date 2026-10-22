@@ -1,4 +1,4 @@
-// Tray visibility follows the macOS menu bar preference without changing other platforms.
+// The tray icon: its menu follows the language and the pause state.
 
 using Avalonia;
 using Avalonia.Controls;
@@ -12,7 +12,7 @@ namespace Filee.App.Tests;
 public sealed class TrayServiceTests
 {
     [AvaloniaFact]
-    public void Mac_tray_visibility_follows_preference_and_non_mac_tray_stays_visible()
+    public void The_tray_icon_is_created_with_a_menu_that_follows_the_pause_state()
     {
         TestServices.EnsureInitialized("en");
         var app = Application.Current!;
@@ -21,40 +21,23 @@ public sealed class TrayServiceTests
         {
             var store = new UserDataStore(directory);
             store.Load();
-            store.Settings.ShowMenuBarIcon = false;
-            store.SaveSettings();
-            var platform = new IconPlatform { SupportsDockVisibility = true };
-            var service = new TrayService(store, AppHost.Get<ILocalizer>(), platform, AppHost.Get<WindowService>(),
-                AppHost.Get<UpdateService>());
+            var service = new TrayService(store, AppHost.Get<ILocalizer>(), AppHost.Get<WindowService>());
             try
             {
                 service.Create(app);
                 var icon = Assert.Single(TrayIcon.GetIcons(app)!);
-                Assert.False(icon.IsVisible);
-
-                store.Settings.ShowMenuBarIcon = true;
-                store.SaveSettings();
                 Assert.True(icon.IsVisible);
+
+                var pause = Assert.IsType<NativeMenuItem>(icon.Menu!.Items[1]);
+                Assert.Equal(AppHost.Get<ILocalizer>()["tray.pause"], pause.Header);
+
+                store.Settings.Paused = true;
+                store.SaveSettings();
+                Assert.Equal(AppHost.Get<ILocalizer>()["tray.resume"], pause.Header);
             }
             finally
             {
                 service.Dispose();
-            }
-
-            var nonMacStore = new UserDataStore(Path.Combine(directory, "non-mac"));
-            nonMacStore.Load();
-            nonMacStore.Settings.ShowMenuBarIcon = false;
-            nonMacStore.SaveSettings();
-            var nonMacService = new TrayService(nonMacStore, AppHost.Get<ILocalizer>(), new IconPlatform(),
-                AppHost.Get<WindowService>(), AppHost.Get<UpdateService>());
-            try
-            {
-                nonMacService.Create(app);
-                Assert.True(Assert.Single(TrayIcon.GetIcons(app)!).IsVisible);
-            }
-            finally
-            {
-                nonMacService.Dispose();
             }
         }
         finally

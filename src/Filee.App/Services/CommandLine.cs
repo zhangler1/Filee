@@ -1,21 +1,11 @@
 // Command line options:
 //   Filee.exe                          open the main window
 //   Filee.exe --background             start in the tray only (used by "start with Windows")
-//   Filee.exe --whats-new[=1.12.0]     with --background: show this version's "What's new" slides anyway, if they
-//                                      are due (the installer after an update the user started); the value is the
-//                                      version updated from, which decides what is new
 //   Filee.exe --settings               open the main window
-//   Filee.exe --convert a b ...        open the donut for these files (Explorer context menu / Send To)
-//   Filee.exe --convert-list <file>    same, with one path per line in a UTF-8 file (Windows 11 Explorer menu, for
-//                                      selections too long for a command line); the app deletes the file afterwards
-// Used by the installer (src/Filee.Setup, Installer.LaunchArguments):
-//   Filee.exe --install-engines=a,b    download these engine packages (EngineDownloads ids) in the engine window;
-//                                      an empty list means the user chose none, so the first-run choice is skipped
-//   Filee.exe --start-with-windows=on|off, --context-menu=on|off
-//                                      set the matching options on the General page
-//   Filee.exe --language=ko            the language picked in Setup (one of LocalizationService.Languages)
+//   Filee.exe --convert a b ...        open the donut for these files (a shortcut, another program)
+//   Filee.exe --convert-list <file>    same, with one path per line in a UTF-8 file, for selections too long for a
+//                                      command line; the app deletes the file afterwards
 //   Filee.exe --quit                   ask a running Filee to exit, and wait until it has (no window otherwise)
-//   Filee.exe --uninstall-cleanup      quit Filee, then remove what it registered for this user (UninstallCleanup)
 
 using System.Text;
 
@@ -23,27 +13,14 @@ namespace Filee.App.Services;
 
 /// <summary>Parsed command line.</summary>
 /// <param name="ListFile">The <c>--convert-list</c> file, if any (see <see cref="DeleteListFile"/>).</param>
-/// <param name="InstallEngines">Engine packages chosen in the installer; null when the option is absent.</param>
-/// <param name="StartWithWindows">Value of <c>--start-with-windows</c>; null when absent.</param>
-/// <param name="ContextMenu">Value of <c>--context-menu</c>; null when absent.</param>
-/// <param name="Language">Value of <c>--language</c>; null when absent.</param>
-/// <param name="WhatsNew"><c>--whats-new</c>: due slides show even when starting in the background.</param>
-/// <param name="UpdatedFrom">The value of <c>--whats-new</c>: the version the installer updated from; null when absent.</param>
 public sealed record CommandLine(
     bool Background,
     bool ShowSettings,
     IReadOnlyList<string> ConvertFiles,
     string? ListFile = null,
-    bool Quit = false,
-    bool UninstallCleanup = false,
-    IReadOnlyList<string>? InstallEngines = null,
-    bool? StartWithWindows = null,
-    bool? ContextMenu = null,
-    string? Language = null,
-    bool WhatsNew = false,
-    string? UpdatedFrom = null)
+    bool Quit = false)
 {
-    /// <summary>File name prefix of list files written by FileeExplorerMenu.dll (LIST_PREFIX there) into %TEMP%.</summary>
+    /// <summary>File name prefix of list files written into %TEMP%.</summary>
     public const string ListFilePrefix = "Filee-convert-";
 
     public static CommandLine Parse(IReadOnlyList<string> args)
@@ -55,13 +32,6 @@ public sealed record CommandLine(
         var collecting = false;
         var expectList = false;
         var quit = false;
-        var cleanup = false;
-        List<string>? engines = null;
-        bool? startWithWindows = null;
-        bool? contextMenu = null;
-        string? language = null;
-        var whatsNew = false;
-        string? updatedFrom = null;
 
         foreach (var arg in args)
         {
@@ -75,31 +45,11 @@ public sealed record CommandLine(
             var (name, value) = SplitOption(arg);
             switch (name)
             {
-                case "--install-engines" when value is not null:
-                    engines = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                        .Select(id => id.ToLowerInvariant()).Distinct().ToList();
-                    break;
-                case "--start-with-windows" or "--start-with-system" when OnOff(value) is { } on:
-                    startWithWindows = on;
-                    break;
-                case "--context-menu" when OnOff(value) is { } on:
-                    contextMenu = on;
-                    break;
-                case "--language" when !string.IsNullOrWhiteSpace(value):
-                    language = value.Trim();
-                    break;
                 case "--quit":
                     quit = true;
                     break;
-                case "--uninstall-cleanup":
-                    cleanup = true;
-                    break;
                 case "--background":
                     background = true;
-                    break;
-                case "--whats-new":
-                    whatsNew = true;
-                    updatedFrom = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
                     break;
                 case "--settings":
                     settings = true;
@@ -117,7 +67,7 @@ public sealed record CommandLine(
                     break;
             }
         }
-        return new CommandLine(background, settings, files, listFile, quit, cleanup, engines, startWithWindows, contextMenu, language, whatsNew, updatedFrom);
+        return new CommandLine(background, settings, files, listFile, quit);
     }
 
     /// <summary>"--Name=Value" → ("--name", "Value"); "--name" → ("--name", null).</summary>
@@ -127,16 +77,9 @@ public sealed record CommandLine(
         return equals < 0 ? (arg.ToLowerInvariant(), null) : (arg[..equals].ToLowerInvariant(), arg[(equals + 1)..]);
     }
 
-    private static bool? OnOff(string? value) => value?.Trim().ToLowerInvariant() switch
-    {
-        "on" or "1" or "true" or "yes" => true,
-        "off" or "0" or "false" or "no" => false,
-        _ => null,
-    };
-
     /// <summary>
-    /// Deletes the list file once its paths were taken over. Only files the Explorer menu wrote (prefix, temp
-    /// folder) are deleted, so a crafted command line cannot make Filee delete anything else.
+    /// Deletes the list file once its paths were taken over. Only files written into the temp folder with the known
+    /// prefix are deleted, so a crafted command line cannot make Filee delete anything else.
     /// </summary>
     public void DeleteListFile()
     {

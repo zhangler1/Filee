@@ -99,46 +99,20 @@ public class ProfileResetTests
         var images = Profile(store, "images");
         images.PresetIds = ["mine", "to-png"];
         // Deleted from the library, and so from every donut.
-        var tiff = store.Presets.FindIndex(p => p.Id == "to-tiff");
-        var after = store.Presets[tiff - 1].Id;
-        store.Presets.RemoveAt(tiff);
+        var bmp = store.Presets.FindIndex(p => p.Id == "to-bmp");
+        var after = store.Presets[bmp - 1].Id;
+        store.Presets.RemoveAt(bmp);
         store.SaveLibrary();
-        Assert.DoesNotContain("to-tiff", images.PresetIds);
+        Assert.DoesNotContain("to-bmp", images.PresetIds);
 
         Assert.True(store.ResetProfile(images));
 
         Assert.Equal(BuiltIn("images").PresetIds, images.PresetIds);
         Assert.NotNull(store.FindPreset("mine")); // off this donut, still in the library
         Assert.Equal(42, store.FindPreset("to-png")!.Image.Quality); // an edited preset keeps its settings
-        Assert.Equal(store.Presets.FindIndex(p => p.Id == after) + 1, store.Presets.FindIndex(p => p.Id == "to-tiff"));
+        Assert.Equal(store.Presets.FindIndex(p => p.Id == after) + 1, store.Presets.FindIndex(p => p.Id == "to-bmp"));
         Assert.Equal(store.Presets.Count, store.Presets.Select(p => p.Id).Distinct().Count());
-        Assert.Contains("to-tiff", NewStore(dir).Profiles.Single(p => p.Id == "images").PresetIds);
-    }
-
-    [Fact]
-    public void The_geospatial_donut_resets_like_the_other_built_in_ones()
-    {
-        using var dir = new TempDir();
-        var store = NewStore(dir);
-        var geo = Profile(store, "geo");
-        geo.Name = "Maps";
-        geo.PresetIds = ["to-kml"];
-        geo.Extensions.Remove("kml");
-        store.Profiles.Insert(0, new ToolbarProfile { Id = "earth", Name = "Earth", Extensions = ["kml"], PresetIds = ["to-geojson"] });
-        store.Presets.RemoveAll(p => p.Id == "to-kmz");
-        store.SaveLibrary();
-
-        Assert.True(store.CanResetProfile(geo));
-        Assert.True(store.ResetProfile(geo));
-
-        var builtIn = BuiltIn("geo");
-        Assert.Equal("", geo.Name);
-        Assert.Equal("profile.geo", geo.NameKey);
-        Assert.Equal(builtIn.PresetIds, geo.PresetIds);
-        Assert.Equal(builtIn.Extensions.Where(e => e != "kml"), geo.Extensions); // .kml stays on the user's donut
-        Assert.Equal(["kml"], Profile(store, "earth").Extensions);
-        Assert.Equal("kmz", store.FindPreset("to-kmz")!.TargetFormat); // the deleted slice's preset is back
-        Assert.All(geo.PresetIds, id => Assert.NotNull(store.FindPreset(id)));
+        Assert.Contains("to-bmp", NewStore(dir).Profiles.Single(p => p.Id == "images").PresetIds);
     }
 
     [Fact]

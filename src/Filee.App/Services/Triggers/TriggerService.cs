@@ -6,7 +6,6 @@ using System.Diagnostics;
 using Avalonia.Threading;
 using Filee.Core.Platform;
 using Filee.Core.Settings;
-using Filee.Core.Web;
 using Microsoft.Extensions.Logging;
 using SharpHook;
 using SharpHook.Data;
@@ -260,9 +259,7 @@ public sealed class TriggerService : IDisposable
             _log.LogInformation("Trace: {Gesture} at {X},{Y} over {Process}", gesture.Kind, x, y, process ?? "(none)");
         if (process is not null && (string.Equals(process, _ownProcess, StringComparison.OrdinalIgnoreCase) || _excluded.Contains(process)))
             return false;
-        return gesture.Scope == TriggerScope.Anywhere || _platform.IsFileManagerAt(x, y)
-               // A picture or link dragged out of a web page opens the donut like a file.
-               || gesture.Kind == TriggerKind.Drag && WebBrowsers.IsBrowser(process);
+        return gesture.Scope == TriggerScope.Anywhere || _platform.IsFileManagerAt(x, y);
     }
 
     private static void Post(Action action) => Dispatcher.UIThread.Post(action);

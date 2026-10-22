@@ -1,7 +1,6 @@
 using System.Collections.Specialized;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Filee.App.Services;
 using Filee.App.ViewModels;
@@ -22,11 +21,6 @@ public partial class ToastWindow : Window
 
     private ConversionService? _service;
 
-    private async void OnRequestFormat(object? sender, RoutedEventArgs e)
-    {
-        if ((sender as Control)?.DataContext is JobViewModel { CanRequestFormat: true } job)
-            await Launcher.LaunchUriAsync(FormatRequest.Url(job.UnknownExtensions));
-    }
     private bool _closed;
 
     protected override void OnDataContextChanged(EventArgs e)

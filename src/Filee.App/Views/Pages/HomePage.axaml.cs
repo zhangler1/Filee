@@ -38,7 +38,7 @@ public partial class HomePage : UserControl
     {
         DropZone.Classes.Remove("over");
         var dragged = DraggedFiles.Read(e.DataTransfer, forDrop: true);
-        if (dragged.Files.Count == 0)
+        if (dragged.Count == 0)
         {
             e.DragEffects = DragDropEffects.None;
             return;
@@ -46,6 +46,6 @@ public partial class HomePage : UserControl
 
         e.DragEffects = DragDropEffects.Copy;
         var screenPoint = this.PointToScreen(e.GetPosition(this));
-        AppHost.Get<RadialController>().ShowForFiles(screenPoint.X, screenPoint.Y, dragged.Files, web: dragged.Web);
+        AppHost.Get<RadialController>().ShowForFiles(screenPoint.X, screenPoint.Y, dragged);
     }
 }

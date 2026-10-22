@@ -3,11 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="using:Filee.App.Controls">
 
-  <!-- The crop overlay's rings read clockwise in Arabic too, like the donut (their labels are shaped right to left). -->
-  <Style Selector="c|AspectDial, c|AspectGlyph, c|CropSummaryRing">
-    <Setter Property="FlowDirection" Value="LeftToRight" />
-  </Style>
-
   <!-- ───────── Donut control colours ───────── -->
   <Style Selector="c|DonutMenu">
     <Setter Property="SliceBrush" Value="{DynamicResource SurfaceBrush}" />

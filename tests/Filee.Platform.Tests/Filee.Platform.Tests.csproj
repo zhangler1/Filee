@@ -5,8 +5,6 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Filee.Platform.Linux\Filee.Platform.Linux.csproj" />
-    <ProjectReference Include="..\..\src\Filee.Platform.MacOS\Filee.Platform.MacOS.csproj" />
     <ProjectReference Include="..\..\src\Filee.Platform.Windows\Filee.Platform.Windows.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit.v3" />

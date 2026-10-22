@@ -1,9 +1,13 @@
+// Real engines + a temp folder with generated sample files (Skia for pictures, PDFsharp for PDFs).
+
 using Filee.Core.Conversion;
 using Filee.Core.Presets;
 using Filee.Core.Settings;
 using Filee.Engines;
 using Filee.Engines.Infrastructure;
-using ImageMagick;
+using PdfSharp.Drawing;
+using PdfSharp.Pdf;
+using SkiaSharp;
 
 namespace Filee.Engines.Tests;
 
@@ -22,16 +26,6 @@ public sealed class EngineFixture : IDisposable
     public IReadOnlyList<IConverter> Converters { get; }
     public ConverterCatalog Catalog { get; }
 
-    /// <summary>Writes a small 한글 document with the built-in HWPX writer (no external engine needed).</summary>
-    public async Task<string> MakeHwpxAsync(string folder)
-    {
-        var txt = Path.Combine(folder, "sample.txt");
-        await File.WriteAllTextAsync(txt, "Filee 한글 문서 테스트\n\n두 번째 문단입니다. 文件转换 Hello");
-        var job = await ConvertAsync([txt], new Preset { TargetFormat = "hwpx" });
-        Assert.True(job.State == JobState.Completed, string.Join("; ", job.Files.Select(f => $"{f.ErrorKey} {f.ErrorDetail}")));
-        return job.Outputs.Single();
-    }
-
     /// <summary>Creates a fresh sub folder for one test.</summary>
     public string NewFolder()
     {
@@ -40,34 +34,46 @@ public sealed class EngineFixture : IDisposable
         return dir;
     }
 
-    /// <summary>Writes a 320×200 gradient image with a transparent corner in the given format.</summary>
-    public static string MakeImage(string folder, string name, MagickFormat format, uint width = 320, uint height = 200)
+    /// <summary>Writes a width×height gradient picture with a fully transparent 40×40 corner in the given format.</summary>
+    public static string MakeImage(string folder, string name, string format, int width = 320, int height = 200)
     {
-        using var image = new MagickImage("gradient:#7F77DD-#1D9E75", width, height);
-        image.Alpha(AlphaOption.Set);
-        // Punch a fully transparent 40×40 hole in the top-left corner (RGBA = 0).
-        using (var pixels = image.GetPixels())
-            pixels.SetArea(0, 0, 40, 40, new byte[40 * 40 * image.ChannelCount]);
+        using var bitmap = new SKBitmap(width, height);
+        using (var canvas = new SKCanvas(bitmap))
+        {
+            canvas.Clear(SKColors.White);
+            using var paint = new SKPaint
+            {
+                Shader = SKShader.CreateLinearGradient(new SKPoint(0, 0), new SKPoint(width, height),
+                    [new SKColor(0x7F, 0x77, 0xDD), new SKColor(0x1D, 0x9E, 0x75)], null, SKShaderTileMode.Clamp),
+            };
+            canvas.DrawRect(0, 0, width, height, paint);
+            canvas.Flush();
+        }
+        // Punch a fully transparent hole in the top-left corner (RGBA = 0).
+        bitmap.Erase(SKColors.Transparent, new SKRectI(0, 0, Math.Min(40, width), Math.Min(40, height)));
         var path = Path.Combine(folder, name);
-        image.Write(path, format);
+        Filee.Engines.Image.SkiaEncoder.Write(bitmap, path, format, new ImageOptions());
         return path;
     }
 
-    /// <summary>Writes a multi-page TIFF.</summary>
-    public static string MakeMultiPageTiff(string folder, int pages)
+    /// <summary>Writes a PDF with <paramref name="pages"/> pages, alternating coral and teal.</summary>
+    public static string MakePdf(string folder, string name, int pages)
     {
-        using var collection = new MagickImageCollection();
+        var path = Path.Combine(folder, name);
+        using var pdf = new PdfDocument();
         for (var i = 0; i < pages; i++)
-            collection.Add(new MagickImage(i % 2 == 0 ? MagickColors.Coral : MagickColors.Teal, 120, 80));
-        var path = Path.Combine(folder, "pages.tiff");
-        collection.Write(path, MagickFormat.Tiff);
+        {
+            var page = pdf.AddPage();
+            using var gfx = XGraphics.FromPdfPage(page);
+            gfx.DrawRectangle(new XSolidBrush(i % 2 == 0 ? XColors.Coral : XColors.Teal), 0, 0, page.Width.Point, page.Height.Point);
+        }
+        pdf.Save(path);
         return path;
     }
 
     public async Task<ConversionJob> ConvertAsync(IReadOnlyList<string> sources, Preset preset)
     {
-        await using var queue = new JobQueue(Catalog, EngineRegistry.FindPdfMerger(Converters),
-            combiner: EngineRegistry.FindFileCombiner(Converters), tiffMerger: EngineRegistry.FindTiffMerger(Converters));
+        await using var queue = new JobQueue(Catalog, EngineRegistry.FindPdfMerger(Converters));
         var job = new ConversionJob(sources, preset, preset.Name);
         await queue.RunAsync(job);
         return job;
